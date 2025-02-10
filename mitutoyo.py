@@ -1,20 +1,11 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[42]:
-
-
 import time
-
 import serial
-
 from serial.tools import list_ports
  
  
 def port_find_unique_dev_by_pidvid(pid: int, vid: int):
 
      found_devices = list(filter(lambda p: p.pid == pid and p.vid == vid, list_ports.comports()))
-
      print(found_devices)
 
      return found_devices[0] if len(found_devices) == 1 else None
@@ -25,7 +16,6 @@ class mitutoyo(object):
  
         if port == "":
             port = str(port_find_unique_dev_by_pidvid(0x4001,0x0fe7)).split(" ")[0]
-
             print(port)
  
         self.ser = serial.Serial(port=port,baudrate=115200)
@@ -33,10 +23,8 @@ class mitutoyo(object):
  
     def answer(self):
  
-        f = self.ser.read().decode() # first character 
-
+        f = self.ser.read().decode() # first character
         a = ""
-
         c = ""
 
         while c != '\r':
@@ -56,11 +44,8 @@ class mitutoyo(object):
     def measurement(self):
 
         m = 0
-
         cmd = "1\r".encode()
-
         self.ser.write(cmd)
-
         a = self.answer().split('\r')[0]
 
         if a.startswith('1A'):
@@ -73,9 +58,7 @@ class mitutoyo(object):
     def info(self):
 
         cmd = "V\r".encode()
-
         self.ser.write(cmd)
- 
         a = self.answer()        
  
         return a
@@ -85,49 +68,29 @@ class mitutoyo(object):
 if __name__ == '__main__':      
 
     um = mitutoyo()
- 
     print(um.info())
  
     while True:
 
         print(um.measurement())
-
         time.sleep(.4)
 
-
 from PyQt5 import QtWidgets, uic, QtGui,QtCore
-
 from PyQt5.QtWidgets import  QSizePolicy, QFileDialog, QMessageBox
-
 from pyqtgraph import PlotWidget, plot
-
 import pyqtgraph as pg
-
-import sys  
-
+import sys
 import os
-
-import numpy 
-
+import numpy
 import time
- 
+
 from mitutoyo import mitutoyo
- 
 import serial.tools.list_ports
-
 import configparser
-
 import random
- 
-# pip install PyQt5
 
-# pip install pyqtgraph
- 
- 
 MITUTOYO_INI = 'mitutoyo.ini'
-
 MITUTOYO_UI = 'mitutoyo.ui'
-
 MAX_POINTS = 200
  
 class MainWindow(QtWidgets.QMainWindow):
@@ -137,51 +100,30 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
 
         #Load the UI Page
-
         uic.loadUi(MITUTOYO_UI, self)
-
         self.config = configparser.ConfigParser()
-
         self.config.read(MITUTOYO_INI)
- 
         self.Unit = "mm"
-
         self.fname = ""
  
-        q = QtWidgets.QAction("Quit", self)     
-
+        q = QtWidgets.QAction("Quit", self)
         q.triggered.connect(self.closeEvent)
 
         self.centralwidget.setLayout(self.gridLayout_2)
- 
         self.read_settings()
- 
         self.btnStop.setEnabled(False)
-
         self.graph_settings()
- 
         self.btnFolder.clicked.connect(self.ChangeDataFolder)
-
         self.ChangeDataFolder()
- 
         self.timer = QtCore.QBasicTimer()
-
         self.X = []
-
         self.Y = []
-
         self.count = 0
- 
         self.btnStart.clicked.connect(self.start_button_measurement)
-
         self.btnStop.clicked.connect(self.btnStopclicked)
-
         self.spiSecondsTimer.valueChanged.connect(self.write_settings)
-
         self.cmbsource.currentIndexChanged.connect(self.write_settings)
- 
         self.dev = mitutoyo(port='COM4')
-        
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
     def timerEvent(self,e):
@@ -189,18 +131,13 @@ class MainWindow(QtWidgets.QMainWindow):
       #  try:
  
                 result = self.dev.measurement()
-
- 
                 self.lblLastValue.setText(str(round(result,4)) + " " + str(self.Unit))
- 
                 self.Y.append(result)
-
                 self.X.append(self.count * self.spiSecondsTimer.value())
  
                 if len(self.Y) > MAX_POINTS:
 
                     self.Y.pop(0)
-
                     self.X.pop(0)
 
                 self.graphWidget.plot(self.X, self.Y, clear=True, pen=pg.mkPen('r', width=2))
@@ -244,13 +181,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def write_settings(self):
  
         interval = str(self.spiSecondsTimer.value())
-
         self.write_key("Settings","Interval",interval)
- 
         port = self.cmbsource.currentText()
-
         self.write_key("Settings","Comport",port)
- 
         self.graph_settings()
 
     def find_key(self,section,option,default_val):
@@ -281,15 +214,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def ChangeDataFolder(self):
  
         self.datapath = self.find_key("Data","Path","c:/data")
-
         newfolder = QFileDialog.getExistingDirectory(self, 'Select directory for data',self.datapath) #,options=QFileDialog.DontUseNativeDialog )
  
         if newfolder:
 
             self.datapath = newfolder
-
             self.lblFilename.setText(self.datapath)
-
             self.write_key("Data","Path",self.datapath)
  
     def btnStopclicked(self):
