@@ -1,8 +1,24 @@
+# pip install PyQt5
+# pip install pyqtgraph
+# pip install openpyxl
+
+
 import time
 import serial
 from serial.tools import list_ports
- 
- 
+from PyQt5 import QtWidgets, uic, QtGui,QtCore
+from PyQt5.QtWidgets import  QSizePolicy, QFileDialog, QMessageBox
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
+import sys  
+import os
+import numpy  
+from mitutoyo import mitutoyo
+import serial.tools.list_ports
+import configparser
+import random
+
+
 def port_find_unique_dev_by_pidvid(pid: int, vid: int):
 
      found_devices = list(filter(lambda p: p.pid == pid and p.vid == vid, list_ports.comports()))
@@ -23,7 +39,7 @@ class mitutoyo(object):
  
     def answer(self):
  
-        f = self.ser.read().decode() # first character
+        f = self.ser.read().decode() # first character 
         a = ""
         c = ""
 
@@ -49,7 +65,7 @@ class mitutoyo(object):
         a = self.answer().split('\r')[0]
 
         if a.startswith('1A'):
-
+         
            m = float(a.replace('1A',""))
  
         return m
@@ -64,7 +80,6 @@ class mitutoyo(object):
         return a
 
 
- 
 if __name__ == '__main__':      
 
     um = mitutoyo()
@@ -75,20 +90,7 @@ if __name__ == '__main__':
         print(um.measurement())
         time.sleep(.4)
 
-from PyQt5 import QtWidgets, uic, QtGui,QtCore
-from PyQt5.QtWidgets import  QSizePolicy, QFileDialog, QMessageBox
-from pyqtgraph import PlotWidget, plot
-import pyqtgraph as pg
-import sys
-import os
-import numpy
-import time
-
-from mitutoyo import mitutoyo
-import serial.tools.list_ports
-import configparser
-import random
-
+ 
 MITUTOYO_INI = 'mitutoyo.ini'
 MITUTOYO_UI = 'mitutoyo.ui'
 MAX_POINTS = 200
@@ -99,16 +101,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        #Load the UI Page
+        # Load the UI Page
         uic.loadUi(MITUTOYO_UI, self)
         self.config = configparser.ConfigParser()
         self.config.read(MITUTOYO_INI)
         self.Unit = "mm"
         self.fname = ""
- 
-        q = QtWidgets.QAction("Quit", self)
+        q = QtWidgets.QAction("Quit", self)     
         q.triggered.connect(self.closeEvent)
-
         self.centralwidget.setLayout(self.gridLayout_2)
         self.read_settings()
         self.btnStop.setEnabled(False)
@@ -145,7 +145,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 with open(self.fname,'a') as fi:
 
                     timestr = time.strftime('%Y-%m-%d %H:%M:%S')
-
                     fi.write(timestr + ',' + str(result) + ',' + self.Unit + '\n')
 
                 self.count = self.count + 1
@@ -157,13 +156,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def read_settings(self):
 
         interval = self.find_key("Settings","Interval",1)
-
         self.spiSecondsTimer.setValue(int(interval))
- 
         usedport = self.find_key("Settings","Comport","com4").lower()
-
         ports = serial.tools.list_ports.comports()
-
         i = 0
 
         for port in ports:
@@ -175,9 +170,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.cmbsource.setCurrentIndex(i)
 
             i= i + 1
- 
-        
 
+ 
     def write_settings(self):
  
         interval = str(self.spiSecondsTimer.value())
@@ -225,71 +219,50 @@ class MainWindow(QtWidgets.QMainWindow):
     def btnStopclicked(self):
  
         self.timer.stop()
-
         self.enableUi()
  
     def enableUi(self):
  
         self.spiSecondsTimer.setEnabled(True)
-
         self.btnStart.setEnabled(True)
-
         self.btnStop.setEnabled(False)
-
         self.cmbsource.setEnabled(True)
-
         self.txtComment.setEnabled(True)
 
     def disableUi(self):
  
         self.spiSecondsTimer.setEnabled(False)
-
         self.btnStart.setEnabled(False)
-
         self.btnStop.setEnabled(True)
-
         self.cmbsource.setEnabled(False)
-
         self.txtComment.setEnabled(False)
  
     def closeEvent(self, event):
  
         self.timer.stop()
-
         event.accept()
 
     def start_button_measurement(self):
  
         starttime = time.strftime('%Y%m%d_%H%M%S')
-
         name = self.datapath + "/Mitutoyo_" + starttime
-
         self.fname = QFileDialog.getSaveFileName(self,"Save measurement", name,  filter=('CSV file (*.csv)'))[0]
 
         if self.fname:
 
             self.datapath,filename = os.path.split(self.fname)
-
             self.start_measurement()
 
     def start_measurement(self):
  
         self.lblFilename.setText(self.fname)
-
         self.graph_settings()
-
         self.disableUi()
- 
         self.save_header()
-
         interval = self.spiSecondsTimer.value() * 1000
-
         self.X = []
-
         self.Y = []
-
         self.count = 0
- 
         self.timer.start(interval,self)
  
     def save_header(self):
@@ -297,49 +270,31 @@ class MainWindow(QtWidgets.QMainWindow):
         with open(self.fname,'w') as fi:
 
             comment = self.txtComment.toPlainText().replace('\n','\n%% ')
-
             fi.write("%% " + comment + "\n")
-
             fi.write("%% Interval (s): " + str(self.spiSecondsTimer.value()) + "\n")
-
             fi.write("Time,Measurements,Unit\n")
  
     def graph_settings(self):
  
         self.graphWidget.clear()
-
         self.graphWidget.showButtons()
-
         self.graphWidget.setBackground((240,240,240))
-
         pen = pg.mkPen('r', width=20)
-
         axis_pen = pg.mkPen(color=(0, 0, 0), width=3)
- 
         self.graphWidget.showGrid(x=True, y=True, alpha=0.4)
-
         font = QtGui.QFont('Arial', 10)
- 
         self.graphWidget.setLabel('bottom','Count * ' + str(self.spiSecondsTimer.value()) + "(s)" ,**{'color': '#FFF', 'font-size': '12pt'})
-
         self.graphWidget.setLabel('left','Weight (' + self.Unit + ")",**{'color': '#FFF', 'font-size': '12pt'})
- 
-        
-
         axises = ( 'bottom', 'left' )
 
         for axis in axises:
 
             self.graphWidget.showAxis(axis)
-
             self.graphWidget.getAxis(axis).tickFont = font
-
             self.graphWidget.getAxis(axis).setTextPen(axis_pen)
- 
+
         Title = "Mitutoyo"
-
         self.graphWidget.setTitle(Title,**{'color': '#000', 'font-size': '20pt'})
-
         self.lblFilename.setText(self.fname)
     
   #  def keyPressEvent(self, event):
@@ -376,17 +331,13 @@ class MainWindow(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
-
     main = MainWindow()
-
     main.show()
-
     sys.exit(app.exec_())
  
 if __name__ == '__main__':      
 
     main()
-
 
 
 # Functie om gegevens naar Excel op te slaan
@@ -407,6 +358,7 @@ if __name__ == '__main__':
         wb.save(filename)
 
 # Voorbeeld: gegevens verzamelen
+
 data = []
 for i in range(5):  # Simuleer 5 metingen
     tijd = time.strftime('%Y-%m-%d %H:%M:%S')  # Huidige tijd
@@ -421,20 +373,4 @@ save_to_excel(data, "meetresultaten.xlsx")
 print("Gegevens zijn opgeslagen in meetresultaten.xlsx")
 
 
-# In[40]:
-
-
-pip install PyQt5
-
-
-# In[24]:
-
-
-pip install openpyxl
-
-
-# In[6]:
-
-
-pip install pyqtgraph
 
